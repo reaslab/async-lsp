@@ -338,7 +338,6 @@ enum Message {
 
 /// A dynamic runtime [LSP request](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#requestMessage).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
 pub struct AnyRequest {
     /// The request id.
     pub id: RequestId,
@@ -352,7 +351,6 @@ pub struct AnyRequest {
 
 /// A dynamic runtime [LSP notification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#notificationMessage).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[non_exhaustive]
 pub struct AnyNotification {
     /// The method to be invoked.
     pub method: String,
