@@ -721,6 +721,18 @@ impl_socket_wrapper!(ClientSocket);
 pub struct ServerSocket(PeerSocket);
 impl_socket_wrapper!(ServerSocket);
 
+impl ServerSocket {
+    /// Send a raw dynamic LSP request with the given method and params, returning the raw JSON result.
+    pub async fn request_any(&self, req: AnyRequest) -> Result<serde_json::Value> {
+        self.0.request_any(req).await
+    }
+
+    /// Send a raw dynamic LSP notification with the given method and params without expecting a response.
+    pub fn notify_any(&self, notif: AnyNotification) -> Result<()> {
+        self.0.notify_any(notif)
+    }
+}
+
 #[derive(Debug, Clone)]
 struct PeerSocket {
     tx: mpsc::UnboundedSender<MainLoopEvent>,
@@ -752,11 +764,26 @@ impl PeerSocket {
         }
     }
 
+    fn request_any(&self, req: AnyRequest) -> PeerSocketRequestFuture<serde_json::Value> {
+        let (tx, rx) = oneshot::channel();
+        // If this fails, the oneshot channel will also be closed, and it is handled by
+        // `PeerSocketRequestFuture`.
+        let _: Result<_, _> = self.send(MainLoopEvent::OutgoingRequest(req, tx));
+        PeerSocketRequestFuture {
+            rx,
+            _marker: PhantomData,
+        }
+    }
+
     fn notify<N: Notification>(&self, params: N::Params) -> Result<()> {
         let notif = AnyNotification {
             method: N::METHOD.into(),
             params: serde_json::to_value(params).expect("Failed to serialize"),
         };
+        self.send(MainLoopEvent::Outgoing(Message::Notification(notif)))
+    }
+
+    fn notify_any(&self, notif: AnyNotification) -> Result<()> {
         self.send(MainLoopEvent::Outgoing(Message::Notification(notif)))
     }
 
